@@ -47,7 +47,7 @@ const ProductCard = ({ id, name_ar, description_ar, price, image_url, is_feature
           )}
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold gradient-fire bg-clip-text text-transparent">
+          <span className="text-xl font-bold text-primary">
             {price.toFixed(2)} ج.م
           </span>
           <Button

@@ -21,6 +21,7 @@ interface Product {
   is_available: boolean;
   is_featured: boolean;
   category_id?: string;
+  image_url?: string;
 }
 
 interface Category {
@@ -77,6 +78,33 @@ const Admin = () => {
   const handleSaveProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    let imageUrl = editingProduct?.image_url || null;
+    
+    // Handle image upload
+    const imageFile = formData.get("image") as File;
+    if (imageFile && imageFile.size > 0) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        toast.error("حدث خطأ في رفع الصورة");
+        console.error(uploadError);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+      
+      imageUrl = publicUrl;
+    }
+    
     const data = {
       name_ar: formData.get("name_ar") as string,
       description_ar: formData.get("description_ar") as string,
@@ -86,6 +114,7 @@ const Admin = () => {
       is_available: formData.get("is_available") === "true",
       name: formData.get("name_ar") as string,
       description: formData.get("description_ar") as string,
+      image_url: imageUrl,
     };
 
     if (editingProduct) {
@@ -227,6 +256,20 @@ const Admin = () => {
                       defaultValue={editingProduct?.description_ar}
                       rows={3}
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="image">صورة المنتج</Label>
+                    <Input
+                      id="image"
+                      name="image"
+                      type="file"
+                      accept="image/*"
+                    />
+                    {editingProduct?.image_url && (
+                      <p className="text-sm text-muted-foreground">
+                        الصورة الحالية موجودة
+                      </p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
