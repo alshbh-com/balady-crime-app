@@ -104,6 +104,14 @@ const Admin = () => {
     try {
       const formData = new FormData(e.currentTarget);
       
+      // Read all form values BEFORE any async operations
+      const isFeatured = (e.currentTarget.elements.namedItem("is_featured") as HTMLInputElement)?.checked || false;
+      const isAvailable = (e.currentTarget.elements.namedItem("is_available") as HTMLInputElement)?.checked || false;
+      const nameAr = formData.get("name_ar") as string;
+      const descriptionAr = formData.get("description_ar") as string;
+      const price = parseFloat(formData.get("price") as string);
+      const categoryId = formData.get("category_id") as string || null;
+      
       let imageUrl = editingProduct?.image_url || null;
       
       // Handle image upload from cropped image
@@ -146,18 +154,15 @@ const Admin = () => {
       
       toast.info("جاري حفظ البيانات...");
       
-      const isFeatured = (e.currentTarget.elements.namedItem("is_featured") as HTMLInputElement)?.checked || false;
-      const isAvailable = (e.currentTarget.elements.namedItem("is_available") as HTMLInputElement)?.checked || false;
-      
       const data = {
-        name_ar: formData.get("name_ar") as string,
-        description_ar: formData.get("description_ar") as string,
-        price: parseFloat(formData.get("price") as string),
-        category_id: formData.get("category_id") as string || null,
+        name_ar: nameAr,
+        description_ar: descriptionAr,
+        price: price,
+        category_id: categoryId,
         is_featured: isFeatured,
         is_available: isAvailable,
-        name: formData.get("name_ar") as string,
-        description: formData.get("description_ar") as string,
+        name: nameAr,
+        description: descriptionAr,
         image_url: imageUrl,
       };
 
