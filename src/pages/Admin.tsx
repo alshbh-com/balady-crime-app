@@ -108,35 +108,40 @@ const Admin = () => {
       
       // Handle image upload from cropped image
       if (croppedImage) {
-        toast.info("جاري ضغط الصورة...");
-        
-        // Compress the image before uploading
-        const compressedImage = await compressImage(croppedImage, 800, 0.85);
-        
-        toast.info("جاري رفع الصورة...");
-        
-        const fileExt = "jpg";
-        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        try {
+          toast.info("جاري ضغط الصورة...");
+          
+          // Compress the image before uploading
+          const compressedImage = await compressImage(croppedImage, 800, 0.85);
+          
+          toast.info("جاري رفع الصورة...");
+          
+          const fileExt = "jpg";
+          const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+          const filePath = `${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(filePath, compressedImage, {
-            cacheControl: '3600',
-            upsert: false
-          });
+          const { error: uploadError } = await supabase.storage
+            .from('product-images')
+            .upload(filePath, compressedImage, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
-        if (uploadError) {
+          if (uploadError) {
+            throw new Error(`فشل رفع الصورة: ${uploadError.message}`);
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('product-images')
+            .getPublicUrl(filePath);
+          
+          imageUrl = publicUrl;
+        } catch (imageError) {
+          console.error("Image upload error:", imageError);
           toast.error("حدث خطأ في رفع الصورة");
-          console.error(uploadError);
+          setIsSaving(false);
           return;
         }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-        
-        imageUrl = publicUrl;
       }
       
       toast.info("جاري حفظ البيانات...");
@@ -162,16 +167,18 @@ const Admin = () => {
           .update(data)
           .eq("id", editingProduct.id);
         if (error) {
+          console.error("Update error:", error);
           toast.error("حدث خطأ في التحديث");
-          console.error(error);
+          setIsSaving(false);
           return;
         }
         toast.success("تم تحديث المنتج بنجاح");
       } else {
         const { error } = await supabase.from("products").insert([data]);
         if (error) {
+          console.error("Insert error:", error);
           toast.error("حدث خطأ في الإضافة");
-          console.error(error);
+          setIsSaving(false);
           return;
         }
         toast.success("تم إضافة المنتج بنجاح");
