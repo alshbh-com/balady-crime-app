@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Edit, Trash2, LogOut, Package, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ImageCropper } from "@/components/ImageCropper";
+import { compressImage } from "@/lib/imageUtils";
 
 interface Product {
   id: string;
@@ -49,6 +50,7 @@ const Admin = () => {
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
   const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
   const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem("admin-auth") === "true";
@@ -97,72 +99,95 @@ const Admin = () => {
 
   const handleSaveProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
+    setIsSaving(true);
     
-    let imageUrl = editingProduct?.image_url || null;
-    
-    // Handle image upload from cropped image
-    if (croppedImage) {
-      const fileExt = "jpg";
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('product-images')
-        .upload(filePath, croppedImage);
-
-      if (uploadError) {
-        toast.error("حدث خطأ في رفع الصورة");
-        console.error(uploadError);
-        return;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('product-images')
-        .getPublicUrl(filePath);
+    try {
+      const formData = new FormData(e.currentTarget);
       
-      imageUrl = publicUrl;
-    }
-    
-    const isFeatured = (e.currentTarget.elements.namedItem("is_featured") as HTMLInputElement)?.checked || false;
-    const isAvailable = (e.currentTarget.elements.namedItem("is_available") as HTMLInputElement)?.checked || false;
-    
-    const data = {
-      name_ar: formData.get("name_ar") as string,
-      description_ar: formData.get("description_ar") as string,
-      price: parseFloat(formData.get("price") as string),
-      category_id: formData.get("category_id") as string || null,
-      is_featured: isFeatured,
-      is_available: isAvailable,
-      name: formData.get("name_ar") as string,
-      description: formData.get("description_ar") as string,
-      image_url: imageUrl,
-    };
+      let imageUrl = editingProduct?.image_url || null;
+      
+      // Handle image upload from cropped image
+      if (croppedImage) {
+        toast.info("جاري ضغط الصورة...");
+        
+        // Compress the image before uploading
+        const compressedImage = await compressImage(croppedImage, 800, 0.85);
+        
+        toast.info("جاري رفع الصورة...");
+        
+        const fileExt = "jpg";
+        const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-    if (editingProduct) {
-      const { error } = await supabase
-        .from("products")
-        .update(data)
-        .eq("id", editingProduct.id);
-      if (error) {
-        toast.error("حدث خطأ في التحديث");
-        return;
-      }
-      toast.success("تم تحديث المنتج بنجاح");
-    } else {
-      const { error } = await supabase.from("products").insert([data]);
-      if (error) {
-        toast.error("حدث خطأ في الإضافة");
-        return;
-      }
-      toast.success("تم إضافة المنتج بنجاح");
-    }
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, compressedImage, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-    setIsProductDialogOpen(false);
-    setEditingProduct(null);
-    setCroppedImage(null);
-    setImageToCrop(null);
-    fetchData();
+        if (uploadError) {
+          toast.error("حدث خطأ في رفع الصورة");
+          console.error(uploadError);
+          return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+        
+        imageUrl = publicUrl;
+      }
+      
+      toast.info("جاري حفظ البيانات...");
+      
+      const isFeatured = (e.currentTarget.elements.namedItem("is_featured") as HTMLInputElement)?.checked || false;
+      const isAvailable = (e.currentTarget.elements.namedItem("is_available") as HTMLInputElement)?.checked || false;
+      
+      const data = {
+        name_ar: formData.get("name_ar") as string,
+        description_ar: formData.get("description_ar") as string,
+        price: parseFloat(formData.get("price") as string),
+        category_id: formData.get("category_id") as string || null,
+        is_featured: isFeatured,
+        is_available: isAvailable,
+        name: formData.get("name_ar") as string,
+        description: formData.get("description_ar") as string,
+        image_url: imageUrl,
+      };
+
+      if (editingProduct) {
+        const { error } = await supabase
+          .from("products")
+          .update(data)
+          .eq("id", editingProduct.id);
+        if (error) {
+          toast.error("حدث خطأ في التحديث");
+          console.error(error);
+          return;
+        }
+        toast.success("تم تحديث المنتج بنجاح");
+      } else {
+        const { error } = await supabase.from("products").insert([data]);
+        if (error) {
+          toast.error("حدث خطأ في الإضافة");
+          console.error(error);
+          return;
+        }
+        toast.success("تم إضافة المنتج بنجاح");
+      }
+
+      setIsProductDialogOpen(false);
+      setEditingProduct(null);
+      setCroppedImage(null);
+      setImageToCrop(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error saving product:", error);
+      toast.error("حدث خطأ غير متوقع");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -353,8 +378,8 @@ const Admin = () => {
                       <Label htmlFor="is_available">متاح</Label>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full gradient-fire">
-                    حفظ
+                  <Button type="submit" className="w-full gradient-fire" disabled={isSaving}>
+                    {isSaving ? "جاري الحفظ..." : "حفظ"}
                   </Button>
                 </form>
               </DialogContent>
