@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, LogOut, Package, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { ImageCropper } from "@/components/ImageCropper";
 
 interface Product {
   id: string;
@@ -46,6 +46,9 @@ const Admin = () => {
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [isOfferDialogOpen, setIsOfferDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+  const [croppedImage, setCroppedImage] = useState<Blob | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
 
   useEffect(() => {
     const isAdmin = localStorage.getItem("admin-auth") === "true";
@@ -74,22 +77,39 @@ const Admin = () => {
     navigate("/settings");
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImageToCrop(reader.result as string);
+        setIsCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCropComplete = (croppedBlob: Blob) => {
+    setCroppedImage(croppedBlob);
+    setIsCropperOpen(false);
+    toast.success("تم قص الصورة بنجاح");
+  };
+
   const handleSaveProduct = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
     let imageUrl = editingProduct?.image_url || null;
     
-    // Handle image upload
-    const imageFile = formData.get("image") as File;
-    if (imageFile && imageFile.size > 0) {
-      const fileExt = imageFile.name.split('.').pop();
+    // Handle image upload from cropped image
+    if (croppedImage) {
+      const fileExt = "jpg";
       const fileName = `${Math.random()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(filePath, imageFile);
+        .upload(filePath, croppedImage);
 
       if (uploadError) {
         toast.error("حدث خطأ في رفع الصورة");
@@ -140,6 +160,8 @@ const Admin = () => {
 
     setIsProductDialogOpen(false);
     setEditingProduct(null);
+    setCroppedImage(null);
+    setImageToCrop(null);
     fetchData();
   };
 
@@ -268,8 +290,14 @@ const Admin = () => {
                       name="image"
                       type="file"
                       accept="image/*"
+                      onChange={handleImageSelect}
                     />
-                    {editingProduct?.image_url && (
+                    {croppedImage && (
+                      <p className="text-sm text-green-600">
+                        ✓ تم قص الصورة - جاهزة للحفظ
+                      </p>
+                    )}
+                    {editingProduct?.image_url && !croppedImage && (
                       <p className="text-sm text-muted-foreground">
                         الصورة الحالية موجودة
                       </p>
@@ -500,6 +528,18 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {imageToCrop && (
+        <ImageCropper
+          image={imageToCrop}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setIsCropperOpen(false);
+            setImageToCrop(null);
+          }}
+          open={isCropperOpen}
+        />
+      )}
     </div>
   );
 };
