@@ -14,7 +14,128 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          display_order: number | null
+          icon: string | null
+          id: string
+          name: string
+          name_ar: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          name_ar: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          name_ar?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          is_featured: boolean | null
+          name: string
+          name_ar: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          name_ar: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          name_ar?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      special_offers: {
+        Row: {
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          discount_percentage: number | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          start_date: string | null
+          title: string
+          title_ar: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          start_date?: string | null
+          title: string
+          title_ar: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          start_date?: string | null
+          title?: string
+          title_ar?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
