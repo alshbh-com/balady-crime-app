@@ -50,7 +50,6 @@ const Admin = () => {
   useEffect(() => {
     const isAdmin = localStorage.getItem("admin-auth") === "true";
     if (!isAdmin) {
-      toast.error("يجب تسجيل الدخول أولاً");
       navigate("/settings");
       return;
     }
@@ -105,13 +104,16 @@ const Admin = () => {
       imageUrl = publicUrl;
     }
     
+    const isFeatured = (e.currentTarget.elements.namedItem("is_featured") as HTMLInputElement)?.checked || false;
+    const isAvailable = (e.currentTarget.elements.namedItem("is_available") as HTMLInputElement)?.checked || false;
+    
     const data = {
       name_ar: formData.get("name_ar") as string,
       description_ar: formData.get("description_ar") as string,
       price: parseFloat(formData.get("price") as string),
       category_id: formData.get("category_id") as string || null,
-      is_featured: formData.get("is_featured") === "true",
-      is_available: formData.get("is_available") === "true",
+      is_featured: isFeatured,
+      is_available: isAvailable,
       name: formData.get("name_ar") as string,
       description: formData.get("description_ar") as string,
       image_url: imageUrl,
@@ -156,11 +158,13 @@ const Admin = () => {
   const handleSaveOffer = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const isActive = (e.currentTarget.elements.namedItem("is_active") as HTMLInputElement)?.checked || false;
+    
     const data = {
       title_ar: formData.get("title_ar") as string,
       description_ar: formData.get("description_ar") as string,
       discount_percentage: parseInt(formData.get("discount_percentage") as string) || null,
-      is_active: formData.get("is_active") === "true",
+      is_active: isActive,
       title: formData.get("title_ar") as string,
       description: formData.get("description_ar") as string,
     };
@@ -301,20 +305,22 @@ const Admin = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Switch
+                      <input
+                        type="checkbox"
                         id="is_featured"
                         name="is_featured"
                         defaultChecked={editingProduct?.is_featured}
-                        value="true"
+                        className="h-4 w-4"
                       />
                       <Label htmlFor="is_featured">منتج مميز</Label>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Switch
+                      <input
+                        type="checkbox"
                         id="is_available"
                         name="is_available"
                         defaultChecked={editingProduct?.is_available ?? true}
-                        value="true"
+                        className="h-4 w-4"
                       />
                       <Label htmlFor="is_available">متاح</Label>
                     </div>
@@ -329,6 +335,13 @@ const Admin = () => {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {products.map((product) => (
                 <Card key={product.id} className="p-4 space-y-3">
+                  {product.image_url && (
+                    <img
+                      src={product.image_url}
+                      alt={product.name_ar}
+                      className="w-full h-40 object-cover rounded-lg"
+                    />
+                  )}
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <h3 className="font-bold text-lg">{product.name_ar}</h3>
@@ -423,11 +436,12 @@ const Admin = () => {
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <Switch
+                    <input
+                      type="checkbox"
                       id="is_active"
                       name="is_active"
                       defaultChecked={editingOffer?.is_active ?? true}
-                      value="true"
+                      className="h-4 w-4"
                     />
                     <Label htmlFor="is_active">العرض نشط</Label>
                   </div>
